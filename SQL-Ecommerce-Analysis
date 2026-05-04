@@ -1,1 +1,192 @@
+CREATE DATABASE ecommerce_project;
+USE ecommerce_project;
 
+
+CREATE TABLE ecom_sales (
+    order_date VARCHAR(20),
+    product_Name VARCHAR(150),
+    category VARCHAR(50),
+    region VARCHAR(50),
+    quantity INT,
+    sales DECIMAL(10,2),
+    profit DECIMAL(10,2)
+);
+select * from ecom_sales  limit 10 ;
+SELECT * FROM ecom_sales WHERE product_Name IS NULL OR sales IS NULL;
+UPDATE ecom_sales
+SET category = 'Unknown'
+WHERE category IS NULL;
+
+SET SQL_SAFE_UPDATES = 0;
+
+UPDATE ecom_sales
+SET category = 'Unknown'
+WHERE category IS NULL;
+
+UPDATE ecom_sales SET product_name = TRIM(product_name);
+UPDATE ecom_sales SET category = TRIM(category);
+UPDATE ecom_sales SET region = TRIM(region);
+
+UPDATE ecom_sales
+SET order_date = STR_TO_DATE(order_date, '%d-%m-%Y');
+
+DELETE FROM ecom_sales WHERE quantity <= 0;
+DELETE FROM ecom_sales WHERE sales <= 0;
+
+SELECT 
+    SUM(sales) AS total_sales,
+    SUM(profit) AS total_profit
+FROM ecom_sales;
+
+SELECT product_name, SUM(sales) AS total_sales
+FROM ecom_sales
+GROUP BY product_name
+ORDER BY total_sales DESC
+LIMIT 5;
+
+SELECT category,
+       SUM(sales) AS revenue,
+       SUM(profit) AS profit
+FROM ecom_sales
+GROUP BY category
+ORDER BY revenue DESC;
+
+SELECT region,
+       SUM(sales) AS revenue
+FROM ecom_sales
+GROUP BY region
+ORDER BY revenue DESC;
+
+SELECT MONTH(order_date) AS month,
+       SUM(sales) AS revenue
+FROM ecom_sales
+GROUP BY month
+ORDER BY month;
+
+SELECT product_name,
+       SUM(profit)/SUM(sales) * 100 AS profit_margin
+FROM ecom_sales
+GROUP BY product_name
+ORDER BY profit_margin DESC;
+
+# Profitability Analysis (VERY IMPORTANT)
+SELECT category,
+       SUM(profit) AS total_profit,
+       SUM(sales) AS total_sales,
+       (SUM(profit)/SUM(sales))*100 AS profit_margin
+FROM ecom_sales
+GROUP BY category
+ORDER BY profit_margin DESC;
+
+# Region-wise Profit Analysis
+SELECT region,
+       SUM(profit) AS total_profit
+FROM ecom_sales
+GROUP BY region
+ORDER BY total_profit DESC;
+
+# Average Order Value (AOV)
+SELECT AVG(sales) AS avg_order_value
+FROM ecom_sales;
+
+# Best Month (Sales Peak)
+SELECT MONTH(order_date) AS month,
+       SUM(sales) AS revenue
+FROM ecom_sales
+GROUP BY month
+ORDER BY revenue DESC
+LIMIT 1;
+
+# Window Function
+SELECT product_name,
+       SUM(sales) AS total_sales,
+       RANK() OVER (ORDER BY SUM(sales) DESC) AS rank_position
+FROM ecom_sales
+GROUP BY product_name;
+
+# Running Total (Trend Analysis)
+SELECT order_date,
+       SUM(sales) OVER (ORDER BY order_date) AS running_total
+FROM ecom_sales;
+
+# Create View
+CREATE VIEW sales_summary AS
+SELECT category,
+       SUM(sales) AS revenue,
+       SUM(profit) AS profit
+FROM ecom_sales
+GROUP BY category;
+SELECT * FROM sales_summary;
+
+#question's
+# Kaunsa region loss de raha hai?
+SELECT region, SUM(profit) AS total_profit
+FROM ecom_sales
+GROUP BY region
+HAVING total_profit < 923185.59;
+
+# Kaunsi category me improvement ki zarurat hai?
+SELECT category,
+       SUM(sales) AS revenue,
+       SUM(profit) AS profit
+FROM ecom_sales
+GROUP BY category
+ORDER BY profit ASC;
+
+# Average order value helps in pricing strategy
+SELECT 
+    COUNT(*) AS total_orders,
+    AVG(sales) AS avg_order_value
+FROM ecom_sales;
+
+SELECT product_name,
+       profit,
+       CASE 
+           WHEN profit > 0 THEN 'Profit'
+           ELSE 'Loss'
+       END AS status
+FROM ecom_sales;
+
+SELECT product_name, sales
+FROM ecom_sales
+WHERE sales > (
+    SELECT AVG(sales) FROM ecom_sales
+);
+
+SELECT *
+FROM (
+    SELECT product_name, category, sales,
+           RANK() OVER (PARTITION BY category ORDER BY sales DESC) AS rnk
+    FROM ecom_sales
+) ranked
+
+WHERE rnk <= 3;SELECT *
+FROM (
+    SELECT product_name, category, sales,
+           RANK() OVER (PARTITION BY category ORDER BY sales DESC) AS rnk
+    FROM ecom_sales
+) ranked
+WHERE rnk <= 3;
+
+CREATE TABLE region_manager (
+    region VARCHAR(50),
+    manager_name VARCHAR(50)
+);
+SELECT e.region, r.manager_name, SUM(e.sales)
+FROM ecom_sales e
+JOIN region_manager r
+ON e.region = r.region
+GROUP BY e.region, r.manager_name;
+
+SELECT 
+    YEAR(order_date) AS year,
+    MONTH(order_date) AS month,
+    SUM(sales) AS revenue
+FROM ecom_sales
+GROUP BY year, month;
+
+SELECT 
+    COUNT(*) AS total_rows,
+    SUM(CASE WHEN product_name IS NULL THEN 1 ELSE 0 END) AS null_products,
+    SUM(CASE WHEN sales <= 0 THEN 1 ELSE 0 END) AS invalid_sales
+FROM ecom_sales;
